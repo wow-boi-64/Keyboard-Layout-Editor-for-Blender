@@ -215,25 +215,30 @@ def read(filepath: str):
             new_switch.name = "switch: %s-%s" % (key.row, key.column)
 
             if keyboard.led_color:
-                new_led = copy_template(keyboard_collection, key, KeySegment.LED, 'led')
+                # Per-key LED geometry using a clean emission material
+                led_mat_name = make_led_material(keyboard.led_color, keyboard.led_brightness)
+                new_led = copy_template(keyboard_collection, key, KeySegment.LED, led_mat_name)
                 new_led.name = "led: %s-%s" % (key.row, key.column)
 
-            for pos, label in enumerate(key.labels):
-                # make sure it's not a front legend
-                if pos < 9:
-                    if label.text != "":
-                        material_name = None
-                        if keyboard.led_color and label.color == keyboard.led_color:
-                            material_name = make_led_material(label.color, keyboard.led_brightness)
-                        else:
-                            material_name = make_key_material(label.color)
 
-                        labels.add(
-                            key,
-                            fonts,
-                            pos,
-                            material_name,
-                            key_obj)
+            for pos, label in enumerate(key.labels):
+                # Process ALL 12 label positions (0–11), including front legends
+                if not label.text:
+                    continue
+
+                if keyboard.led_color and label.color == keyboard.led_color:
+                    material_name = make_led_material(label.color, keyboard.led_brightness)
+                else:
+                    material_name = make_key_material(label.color)
+
+                labels.add(
+                    key,
+                    fonts,
+                    pos,
+                    material_name,
+                    key_obj
+                )
+
 
             # rotate key
             if key.rotation:
@@ -350,9 +355,6 @@ def read(filepath: str):
     bpy.data.materials["Stem"].node_tree.nodes[
         "Diffuse BSDF"].inputs["Color"].default_value = keyboard.stem_color
 
-    if keyboard.led_color:
-        bpy.data.materials["led"].node_tree.nodes["Emission"].inputs["Color"].default_value = hex2rgb(keyboard.led_color)
-        bpy.data.materials["led"].node_tree.nodes["Emission"].inputs["Strength"].default_value = keyboard.led_brightness * 5
 
 
 def cleanup():
